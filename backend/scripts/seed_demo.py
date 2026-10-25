@@ -19,10 +19,10 @@ from app.config import load_settings  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.security import rate_limiter  # noqa: E402
 
-WORKER = {"email": "demo.worker@haq.example", "password": "DemoWorker123", "display_name": "DEMO Asha Devi",
+WORKER = {"email": "demo.worker@haq.example", "password": "DemoWorker123", "display_name": "Asha",
           "phone": "9000000001", "preferred_language": "en"}
-EMPLOYER = {"email": "demo.employer@haq.example", "password": "DemoEmployer123", "display_name": "DEMO Ravi Kumar",
-            "business_name": "DEMO Kumar Builders", "preferred_language": "en"}
+EMPLOYER = {"email": "demo.employer@haq.example", "password": "DemoEmployer123", "display_name": "Ravi Kumar",
+            "business_name": "Kumar Builders", "preferred_language": "en"}
 
 
 def main() -> None:
@@ -50,22 +50,22 @@ def main() -> None:
     register("employer", EMPLOYER)
 
     eng = c.post("/api/worker/engagements", headers=w, json={
-        "employer_name": "DEMO Kumar Builders", "work_type": "Construction helper", "pay_type": "daily",
+        "employer_name": "Kumar Builders", "work_type": "Construction helper", "pay_type": "daily",
         "rate": "800", "units": "18", "payments_received": "8000",
         "start_date": "2026-09-01", "end_date": "2026-09-20", "notes": "DEMO record"}).json()
 
     claim = c.post("/api/claims", headers=w, json={"language": "en", "description":
-        "[DEMO] I worked 18 days as a helper at the Kumar Builders site from 1 to 20 September. "
+        "I worked 18 days as a helper at the Kumar Builders site from 1 to 20 September. "
         "We agreed Rs 800 per day. I was paid Rs 8000 on 5 September and nothing after that."}).json()
     cid = claim["id"]
     c.patch(f"/api/claims/{cid}", headers=w, json={
-        "employer_name": "DEMO Kumar Builders", "employer_email": EMPLOYER["email"], "work_type": "Construction helper",
+        "employer_name": "Kumar Builders", "employer_email": EMPLOYER["email"], "work_type": "Construction helper",
         "start_date": "2026-09-01", "end_date": "2026-09-20", "amount_claimed": "6400",
         "requested_outcome": "Please pay the remaining wages of Rs 6400.", "engagement_id": eng["id"]})
     files = [
         ("demo-whatsapp-chat.txt", "[DEMO] Ravi (05/09/2026): Paid Rs 8000 today by UPI. Will pay the rest after the slab work.\n"
                                    "Asha (21/09/2026): Sir, the remaining Rs 6400 is still pending.".encode()),
-        ("demo-attendance.txt", "[DEMO] Attendance September 2026 — Asha Devi\nDays present: 18\nRate: Rs 800/day".encode()),
+        ("demo-attendance.txt", "[DEMO] Attendance September 2026 — Asha\nDays present: 18\nRate: Rs 800/day".encode()),
     ]
     ev_ids = []
     for name, data in files:

@@ -24,6 +24,9 @@ export default function EmployerClaim() {
 
   const load = useCallback(() => api(`/api/employer/claims/${id}`).then(setClaim).catch(setError), [id])
   useEffect(() => { load() }, [load])
+  // Once the worker accepts an offer, fill the payment amount with the agreed amount.
+  const agreed = claim?.settlements?.find((s) => s.status === 'accepted')?.amount
+  useEffect(() => { if (agreed) setPay((p) => (p.amount ? p : { ...p, amount: String(agreed) })) }, [agreed])
 
   const post = async (path, body, headers) => {
     setBusy(true); setActionError(null)
@@ -42,6 +45,7 @@ export default function EmployerClaim() {
   const closed = ['resolved', 'withdrawn'].includes(claim.status)
   const canOffer = !closed && !['settlement_accepted', 'payment_pending', 'partially_resolved'].includes(claim.status)
   const accepted = claim.settlements.find((s) => s.status === 'accepted')
+  const waiting = claim.settlements.some((s) => s.status === 'offered')
 
   return (
     <div className="stack">
@@ -118,7 +122,9 @@ export default function EmployerClaim() {
         </section>
       )}
 
-      {canOffer && (
+      {waiting && !closed && <p className="note">{t('waitingOffer')}</p>}
+
+      {canOffer && !waiting && (
         <form className="card" onSubmit={async (e) => {
           e.preventDefault()
           if (await post('/settlements', { amount: offer.amount, explanation: offer.explanation, expires_on: offer.expires_on || null }, { 'Idempotency-Key': offerKey.current })) {
@@ -149,7 +155,7 @@ export default function EmployerClaim() {
         </section>
       )}
 
-      {!closed && (
+      {!closed && !waiting && (
         <form className="card" onSubmit={async (e) => {
           e.preventDefault()
           const body = { ...pay, receipt_evidence_id: pay.receipt_evidence_id || null, reference: pay.reference || null, settlement_id: accepted?.id || null }

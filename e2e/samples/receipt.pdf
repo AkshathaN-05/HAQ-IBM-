@@ -1,32 +1,80 @@
 %PDF-1.4
+%“Œ‹ž ReportLab Generated PDF document (opensource)
 1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
+<<
+/F1 2 0 R /F2 3 0 R /F3 4 0 R
+>>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+<<
+/BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font
+>>
 endobj
 3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+<<
+/BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /Name /F2 /Subtype /Type1 /Type /Font
+>>
 endobj
 4 0 obj
-<< /Length 82 >>
-stream
-BT /F1 12 Tf 72 720 Td (UPI receipt: INR 3000 paid on 2026-10-02 to Lakshmi) Tj ET
-endstream
+<<
+/BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding /Name /F3 /Subtype /Type1 /Type /Font
+>>
 endobj
 5 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+<<
+/Contents 9 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 8 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 /Trans <<
+
+>> 
+  /Type /Page
+>>
+endobj
+6 0 obj
+<<
+/PageMode /UseNone /Pages 8 0 R /Type /Catalog
+>>
+endobj
+7 0 obj
+<<
+/Author (anonymous) /CreationDate (D:20261025090609+00'00') /Creator (anonymous) /Keywords () /ModDate (D:20261025090609+00'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+  /Subject (unspecified) /Title (Wage record - Asha) /Trapped /False
+>>
+endobj
+8 0 obj
+<<
+/Count 1 /Kids [ 5 0 R ] /Type /Pages
+>>
+endobj
+9 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ] /Length 877
+>>
+stream
+Gat=*bAO+0&A70VlBjsOA+O;NaX[275*S`Cm3NQ]E!A4.,;=u:n(06=lg`8YbX`kXU:OUtDOQ1@596nb$Fi\_qa<_UUlV1_j!4M_lh"^iG<t8<h5*mADk2n&+[Hf>-]SiLWc7g(/NMs@+e.g,koZ_aDaZVd*<LJG3taOSTh.d`hj^G__bZ4.9q`7;GZ[8n*&"UCiXH6G>i136r'AIQ0TeZ'C7aB]2?RnqZD'*ROb&!&CY5O:cdG&\6c0K-Lb0Mb1pKS(gRQq2#A&RF_/PT2_5F?di(1raUXQV=#1%ElQZDa?;`8='FVS\2eJ2Z8RhkarF7rjH=M6qgXt['im2bIcMN9g+0$kA+V\9`$F"ps`B1YG7RmJ/p0=EX"M9m,sB.e0k-jbsY82<;%f=-m:bD,<qC0AZIeN4J6>k8`QL!I#R^Smr)\O#G@Up#2+/u;D^_!s`U,%4iM!^V>Zo%$K`9]3Kq3$-CABHQF4&e6+\NVp!pR*m2eHc(^L;J\k82Yq<1$X(NZ^Yit(h[]>ZK6!(h@_&h)m6?fkK>9:'[p+$Xg1,^@p>.Q@Nt:@\Y6Ve^"UcC>LAP35Scs>43-IHU4L(6_<$tVW:9+-Q0o>f_*@h8anQ=erG0,`&oAm==eUu]32N0E]]8COE..`-;N3_AsN3_B*NM=OL;6Q%U;9+n>0rBP%.TYslcbSsfb@K*!U%&/qCqP,10+5P6hI4aeYifE7,if2Bd\rlkd>;&Yp'9sD4BSc#g#K93b#,KF`J&'s_K?N.pjs=.\jbq!kh"'\#BpR3Ysk-TNF3YI"f`=&ISb"MkT5m13-!rW'3RT?<i<_/\eQ%[AXp*@>i$[bQ#uMZ<P0>!1"#[eZW:&1N2*FJ2)tC>eDtA6~>endstream
 endobj
 xref
-0 6
+0 10
 0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000241 00000 n 
-0000000373 00000 n 
+0000000061 00000 n 
+0000000112 00000 n 
+0000000219 00000 n 
+0000000331 00000 n 
+0000000446 00000 n 
+0000000649 00000 n 
+0000000717 00000 n 
+0000000988 00000 n 
+0000001047 00000 n 
 trailer
-<< /Size 6 /Root 1 0 R >>
+<<
+/ID 
+[<eb79d39b867634beaff56d395e34d9a2><eb79d39b867634beaff56d395e34d9a2>]
+% ReportLab generated PDF document -- digest (opensource)
+
+/Info 7 0 R
+/Root 6 0 R
+/Size 10
+>>
 startxref
-443
+2014
 %%EOF

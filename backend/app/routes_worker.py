@@ -244,7 +244,7 @@ def process_evidence(ctx: AppContext, evidence_id: str) -> None:
     ext = row["storage_name"].rsplit(".", 1)[-1]
     status, text, error = "done", None, None
     try:
-        text = extract_text(path, ext, ctx.settings.ocr_languages)
+        text = extract_text(path, ext, ctx.settings.ocr_languages, ctx.settings.stt_model)
     except ExtractionUnsupported as e:
         status, error = "unsupported", str(e)
     except Exception as e:  # corrupt files etc.

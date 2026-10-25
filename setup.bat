@@ -12,6 +12,8 @@ if not exist .venv %PY% -m venv .venv || exit /b 1
 .venv\Scripts\python -m pip install --upgrade pip >nul
 .venv\Scripts\python -m pip install -r requirements-dev.txt || exit /b 1
 if not exist .env copy .env.example .env >nul
+echo [HAQ] Downloading the offline speech model (one time, needs internet)...
+.venv\Scripts\python scripts\download_speech_model.py
 
 echo [HAQ] Installing and building the web app...
 cd ..\frontend

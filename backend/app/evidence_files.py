@@ -11,6 +11,7 @@ import re
 import secrets
 import shutil
 import subprocess
+import threading
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -133,7 +134,7 @@ class ExtractionUnsupported(Exception):
 MAX_EXTRACT_CHARS = 20000
 
 
-def extract_text(path: Path, ext: str, ocr_languages: str = "eng") -> str:
+def extract_text(path: Path, ext: str, ocr_languages: str = "eng", stt_model: str = "off") -> str:
     if ext == "txt":
         return path.read_text(encoding="utf-8", errors="replace")[:MAX_EXTRACT_CHARS]
     if ext == "pdf":
@@ -152,7 +153,42 @@ def extract_text(path: Path, ext: str, ocr_languages: str = "eng") -> str:
         return _docx_text(path)[:MAX_EXTRACT_CHARS]
     if ext in ("jpg", "jpeg", "png", "webp"):
         return _ocr(path, ocr_languages)[:MAX_EXTRACT_CHARS]
+    if stt_model != "off" and stt_available():
+        return _transcribe(path, stt_model)[:MAX_EXTRACT_CHARS]
     raise ExtractionUnsupported("Audio and video are stored safely but not transcribed: no speech-to-text service is configured.")
+
+
+# --- Offline speech-to-text (Whisper via faster-whisper) --------------------------------------
+
+_stt_lock = threading.Lock()
+_stt_models: dict = {}
+
+
+def stt_available() -> bool:
+    try:
+        import faster_whisper  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+def load_stt_model(name: str):
+    """Load (and on first use download) the Whisper model. Runs on the CPU, works offline afterwards."""
+    with _stt_lock:
+        if name not in _stt_models:
+            from faster_whisper import WhisperModel
+            _stt_models[name] = WhisperModel(name, device="cpu", compute_type="int8")
+        return _stt_models[name]
+
+
+def _transcribe(path: Path, model_name: str) -> str:
+    model = load_stt_model(model_name)
+    with _stt_lock:  # one transcription at a time keeps memory low on small laptops
+        segments, _info = model.transcribe(str(path), beam_size=5)
+        text = " ".join(seg.text.strip() for seg in segments).strip()
+    if not text:
+        raise ExtractionUnsupported("No speech could be heard in this recording. It is still attached.")
+    return text
 
 
 def _docx_text(path: Path) -> str:
@@ -190,7 +226,7 @@ def _ocr(path: Path, languages: str) -> str:
 
 _AMOUNT_RE = re.compile(
     r"(?:₹|rs\.?|inr|rupees?)\s*([0-9]{1,3}(?:,[0-9]{2,3})+(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)"
-    r"|([0-9]{1,3}(?:,[0-9]{2,3})+(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:/-|rs\.?|rupees?|inr)",
+    r"|(?<![/\-.\d])([0-9]{1,3}(?:,[0-9]{2,3})+(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:/-|rs\.?|rupees?|inr)",
     re.IGNORECASE,
 )
 _MONTHS = "jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec"

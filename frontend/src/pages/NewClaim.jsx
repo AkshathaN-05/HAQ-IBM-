@@ -349,13 +349,10 @@ function StepDraft({ claim, setClaim, next, back }) {
       <h1>{t('s5Title')}</h1>
       <p className="muted">{t('s5Help')}</p>
       <button type="button" className="btn btn-primary" onClick={generate} disabled={busy}>{busy ? t('preparing') : text ? t('remakeDraft') : t('makeDraft')}</button>
-      {meta && (
-        <p className={meta.source === 'ai' ? 'note note-ai' : 'note'}>
-          {meta.source === 'ai' ? t('draftByAi', { provider: meta.provider === 'ibm-watsonx' ? 'IBM Granite on watsonx.ai' : 'IBM Granite (local)', model: meta.model }) : t('draftByTemplate')}
+      {meta?.source === 'ai' && (
+        <p className="note note-ai">
+          {t('draftByAi', { provider: meta.provider === 'ibm-watsonx' ? 'IBM Granite on watsonx.ai' : 'IBM Granite (local)', model: meta.model })}
         </p>
-      )}
-      {meta?.warnings?.length > 0 && (
-        <div className="note note-warn"><strong>{t('warnings')}</strong><ul>{meta.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></div>
       )}
       <ErrorNote error={error} />
       {text && (

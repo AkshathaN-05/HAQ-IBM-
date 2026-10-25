@@ -11,7 +11,7 @@ from .claims_service import claim_view, worker_claim
 from .db import now_iso
 from .deps import AppContext, current_user, get_ctx, require_worker
 from .errors import ApiError
-from .evidence_files import ocr_available
+from .evidence_files import ocr_available, stt_available
 
 router = APIRouter(prefix="/api", tags=["common"])
 
@@ -25,7 +25,7 @@ def health(ctx: AppContext = Depends(get_ctx)):
         "environment": ctx.settings.app_env,
         "ai": ctx.ai.status(),
         "ocr": "available" if ocr_available() else "not installed",
-        "speech_to_text": "browser dictation only (no server transcription)",
+        "speech_to_text": (f"offline Whisper ({ctx.settings.stt_model})" if ctx.settings.stt_model != "off" and stt_available() else "browser dictation only"),
         "email": ctx.settings.email_mode,
     }
 

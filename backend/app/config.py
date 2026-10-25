@@ -65,6 +65,7 @@ class Settings:
     ollama_model: str = "granite3.3:2b"
 
     ocr_languages: str = "eng"
+    stt_model: str = "off"  # offline speech-to-text (faster-whisper): off, tiny, base, small
 
     @property
     def is_dev(self) -> bool:
@@ -107,6 +108,7 @@ def load_settings() -> Settings:
     s.ollama_url = _env("OLLAMA_URL", s.ollama_url).rstrip("/")
     s.ollama_model = _env("OLLAMA_MODEL", s.ollama_model)
     s.ocr_languages = _env("OCR_LANGUAGES", "eng")
+    s.stt_model = _env("STT_MODEL", "base").strip().lower() or "off"
 
     s.data_dir.mkdir(parents=True, exist_ok=True)
     s.storage_dir.mkdir(parents=True, exist_ok=True)

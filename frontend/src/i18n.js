@@ -149,6 +149,7 @@ const en = {
   preparing: 'Preparing your letter…',
   draftByAi: 'Written with help from {provider} ({model}). Please check every fact.',
   draftByTemplate: 'Prepared from a simple template (no AI was used). Please check it.',
+  waitingOffer: 'Your offer has been sent. Waiting for the worker to accept or reject it.',
   warnings: 'Please note',
   keyFacts: 'Where each fact comes from',
   fromYou: 'You told us',

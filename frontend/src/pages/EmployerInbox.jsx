@@ -20,7 +20,6 @@ export default function EmployerInbox() {
   return (
     <div className="stack">
       <h1 className="greeting">{t('hello', { name: user.business_name || user.display_name })}</h1>
-      <p className="muted small">{t('verificationStatus', { s: t(`ver_${user.employer_verification}`) })}</p>
       <VerifyEmailCard />
       {user.email_verified && (
         <section>
