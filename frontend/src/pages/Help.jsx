@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useI18n } from '../i18n'
 
 const SECTIONS = [
@@ -12,7 +13,7 @@ const SECTIONS = [
 export default function Help() {
   const { t } = useI18n()
   return (
-    <div className="narrow stack">
+    <div className="narrow-page stack">
       <h1>{t('helpTitle')}</h1>
       {SECTIONS.map(([h, p]) => (
         <section key={h} className="card">
@@ -21,6 +22,7 @@ export default function Help() {
         </section>
       ))}
       <p className="note">{t('helpNotLegal')}</p>
+      <Link to="/guide">{t('guideLink')} →</Link>
     </div>
   )
 }

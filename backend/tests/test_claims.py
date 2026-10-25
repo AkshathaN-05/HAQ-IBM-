@@ -232,3 +232,15 @@ def test_withdraw_draft(client, app, worker):
     r = worker.post(f"/api/claims/{cid}/withdraw", json={})
     assert r.json()["status"] == "withdrawn"
     assert worker.post(f"/api/claims/{cid}/withdraw", json={}).status_code == 409
+
+
+def test_other_problem_claim_has_no_amount_line(client, app, worker):
+    c = worker.post("/api/claims", json={"language": "en", "issue_type": "safety",
+                                         "description": "We were not given gloves or helmets at the site, and two workers got hurt."}).json()
+    assert c["issue_type"] == "safety"
+    worker.patch(f"/api/claims/{c['id']}", json={"employer_name": "Kumar Builders", "employer_email": "boss@example.com"})
+    d = worker.post(f"/api/claims/{c['id']}/draft").json()["draft"]
+    assert "Problem: No safety equipment or unsafe work" in d["text"]
+    assert "Amount requested" not in d["text"]
+    listed = worker.get("/api/claims").json()["items"][0]
+    assert listed["issue_type"] == "safety"

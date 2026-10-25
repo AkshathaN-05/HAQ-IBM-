@@ -74,20 +74,23 @@ def main():
         @step("Landing page loads")
         def landing():
             w.goto(BASE)
-            expect(w.get_by_text("Your wages. Your right.")).to_be_visible()
+            expect(w.get_by_role("heading", name="Your wages. Your right.")).to_be_visible()
             shot(w, "01-landing")
         landing()
 
         @step("Worker registers and verifies email")
         def worker_register():
             register_and_verify(w, "worker", WORKER)
-            expect(w.get_by_text("Tell us what happened")).to_be_visible()
+            expect(w.get_by_text("Unpaid wages", exact=True)).to_be_visible()
+            expect(w.get_by_text("Another problem at work", exact=True)).to_be_visible()
             shot(w, "02-worker-home")
         worker_register()
 
-        @step("Worker describes the problem (step 1)")
+        @step("Worker picks the problem type and describes it (step 1 of 4)")
         def describe():
-            w.get_by_text("Tell us what happened").click()
+            w.get_by_text("Unpaid wages", exact=True).click()
+            expect(w.locator(".issue-chosen")).to_contain_text("Unpaid or less wages")
+            expect(w.locator(".issue-picker")).to_have_count(0)
             w.get_by_label("What happened at work?").fill(
                 "I worked as a cook for the Mehta family from 1 August to 30 September 2026. We agreed Rs 9000 per month. "
                 "They paid Rs 12000 in total and stopped answering my calls.")
@@ -97,16 +100,18 @@ def main():
             expect(w.get_by_text("Add any proof you have")).to_be_visible()
         describe()
 
-        @step("Worker uploads mixed evidence and text is extracted (step 2)")
+        @step("Worker uploads mixed evidence and text is extracted (step 2 of 4)")
         def evidence():
             w.locator("input[type=file]").set_input_files([str(SAMPLES / "chat.txt"), str(SAMPLES / "receipt.pdf"), str(SAMPLES / "voice-note.mp3")])
-            expect(w.locator(".file-item .ex-done")).to_have_count(2, timeout=20000)
-            expect(w.get_by_text("Kept safely, but not read automatically")).to_be_visible()
+            # chat.txt and receipt.pdf are always read; the voice note too when offline speech-to-text is set up
+            expect(w.locator(".file-item")).to_have_count(3, timeout=20000)
+            expect(w.locator(".file-item .ex-pending")).to_have_count(0, timeout=90000)
+            expect(w.locator(".file-item .ex-done").nth(1)).to_be_visible()
             shot(w, "04-evidence")
             w.get_by_role("button", name="Next").click()
         evidence()
 
-        @step("Worker fills key details using suggestions (step 3)")
+        @step("Worker fills only the needed details (step 3 of 4)")
         def details():
             w.get_by_label("Employer or customer name").fill("Mehta family")
             w.get_by_label("Employer email (needed to send the claim)").fill(EMPLOYER["email"])
@@ -117,28 +122,25 @@ def main():
             w.get_by_label("What do you want the employer to do?").fill("Please pay the remaining ₹6,000.")
             shot(w, "05-details")
             w.get_by_role("button", name="Next").click()
-            expect(w.get_by_text("Check your claim")).to_be_visible()
-            shot(w, "06-summary-checks")
-            w.get_by_role("button", name="Next").click()
+            expect(w.get_by_text("Check and send", exact=True)).to_be_visible()
         details()
 
-        @step("Complaint letter is prepared, labelled and editable (step 5)")
+        @step("Letter is prepared automatically, checks shown, and editable (step 4 of 4)")
         def draft():
-            w.get_by_role("button", name="Prepare my letter").click()
-            expect(w.get_by_text("Prepared from a simple template")).to_be_visible(timeout=20000)
             letter = w.locator("#complaint")
+            expect(letter).to_be_visible(timeout=20000)
             expect(letter).to_contain_text("₹6,000")
             letter.fill(letter.input_value().replace("Cook", "Cook (full-time)"))
+            shot(w, "06-summary-checks")
             shot(w, "07-letter")
-            w.get_by_role("button", name="Next").click()
-            expect(w.get_by_text("Choose what to share and send")).to_be_visible()
         draft()
 
-        @step("Send is blocked until the worker confirms; then the claim is sent (step 6)")
+        @step("Send is blocked until the worker confirms; then the claim is sent")
         def send():
             send_btn = w.get_by_role("button", name="Send to employer")
             expect(send_btn).to_be_disabled()
-            w.locator(".share-list label").first.click()  # share only the first file
+            w.locator(".share-list label").nth(1).click()  # share only the first file
+            w.locator(".share-list label").nth(2).click()
             w.locator(".check-row.confirm input").check()
             shot(w, "08-send")
             send_btn.click()
@@ -210,25 +212,22 @@ def main():
             shot(w, "14-resolved")
         payment()
 
-        @step("Wage calculator, and Hindi, Tamil and Urdu (right-to-left) interfaces")
+        @step("Next-steps guide, and Hindi, Tamil and Urdu (right-to-left) interfaces")
         def calc_hindi():
-            w.goto(f"{BASE}/wages")
-            w.get_by_label("Agreed rate (₹)").fill("800")
-            w.get_by_label("Days worked").fill("18")
-            w.get_by_label("Total already paid (₹)").fill("8000")
-            w.get_by_role("button", name="Calculate").click()
-            expect(w.get_by_text("₹6,400")).to_be_visible()
-            shot(w, "15-wage-calculator")
+            w.goto(f"{BASE}/guide")
+            expect(w.get_by_role("heading", name="If your problem is not solved")).to_be_visible()
+            expect(w.get_by_text("15100", exact=False)).to_be_visible()
+            shot(w, "15-guide")
             w.goto(f"{BASE}/worker")
             w.get_by_label("Language").first.select_option("hi")
-            expect(w.get_by_text("बताइए क्या हुआ")).to_be_visible()
+            expect(w.get_by_text("मज़दूरी नहीं मिली", exact=True)).to_be_visible()
             shot(w, "16-hindi-home")
             w.get_by_label("भाषा").first.select_option("ta")
-            expect(w.get_by_text("என்ன நடந்தது என்று சொல்லுங்கள்")).to_be_visible()
+            expect(w.get_by_text("சம்பளம் கிடைக்கவில்லை", exact=True)).to_be_visible()
             shot(w, "18-tamil-home")
             w.get_by_label("மொழி").first.select_option("ur")
             expect(w.locator("html")).to_have_attribute("dir", "rtl")
-            expect(w.get_by_text("بتائیے کیا ہوا")).to_be_visible()
+            expect(w.get_by_text("اجرت نہیں ملی", exact=True)).to_be_visible()
             shot(w, "19-urdu-home")
             w.get_by_label("زبان").first.select_option("en")
         calc_hindi()

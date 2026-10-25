@@ -63,7 +63,7 @@ def _evidence_public(e: dict, include_text: bool) -> dict:
 def claim_view(c: sqlite3.Connection, claim: dict, role: str) -> dict:
     cid = claim["id"]
     worker = c.execute("SELECT display_name, phone, email FROM users WHERE id = ?", (claim["worker_id"],)).fetchone()
-    base_fields = ("id", "reference", "status", "language", "employer_name", "work_type", "start_date", "end_date",
+    base_fields = ("id", "reference", "status", "language", "issue_type", "employer_name", "work_type", "start_date", "end_date",
                    "amount_claimed", "requested_outcome", "complaint_text", "complaint_provider", "submitted_at",
                    "created_at", "updated_at")
     view = {k: claim[k] for k in base_fields}

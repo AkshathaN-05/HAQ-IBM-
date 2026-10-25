@@ -4,25 +4,46 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import { useI18n } from '../i18n'
 import { ErrorNote, Money, StatusBadge, VerifyEmailCard, formatDate } from '../components/ui'
+import { Stat } from './WorkerHome'
 
 export default function EmployerInbox() {
   const { user } = useAuth()
   const { t } = useI18n()
   const [filter, setFilter] = useState('attention')
   const [data, setData] = useState(null)
+  const [all, setAll] = useState(null)
   const [error, setError] = useState(null)
   useEffect(() => {
     if (!user.email_verified) return
     setError(null); setData(null)
     api(`/api/employer/claims?filter=${filter}`).then(setData).catch(setError)
   }, [filter, user.email_verified])
+  useEffect(() => {
+    if (!user.email_verified) return
+    Promise.all([api('/api/employer/claims?filter=all&limit=100'), api('/api/employer/claims?filter=attention&limit=100')])
+      .then(([a, b]) => setAll({ total: a.total, attention: b.total, resolved: a.items.filter((c) => c.status === 'resolved').length }))
+      .catch(() => {})
+  }, [user.email_verified])
 
   return (
-    <div className="stack">
-      <h1 className="greeting">{t('hello', { name: user.business_name || user.display_name })}</h1>
+    <div className="stack-l">
+      <section className="page-hero">
+        <div>
+          <p className="eyebrow">{t('eyebrowEmployer')}</p>
+          <h1 className="hero-title">{t('hello', { name: user.business_name || user.display_name })}</h1>
+          <p className="lead muted">{t('employerLead')}</p>
+        </div>
+      </section>
       <VerifyEmailCard />
+      {user.email_verified && all && (
+        <div className="stats">
+          <Stat label={t('statReceived')} value={all.total} tone="blue" />
+          <Stat label={t('statAttention')} value={all.attention} tone="amber" />
+          <Stat label={t('statResolved')} value={all.resolved} tone="green" />
+        </div>
+      )}
       {user.email_verified && (
-        <section>
+        <section className="card">
           <div className="row between wrap">
             <h2>{t('inbox')}</h2>
             <div className="segmented" role="tablist">
@@ -42,7 +63,7 @@ export default function EmployerInbox() {
                 <li key={c.id}>
                   <Link to={`/employer/claims/${c.id}`} className="claim-row">
                     <div>
-                      <div className="row gap-s"><StatusBadge status={c.status} />{c.unread > 0 && <span className="pill">{t('unreadUpdates', { n: c.unread })}</span>}</div>
+                      <div className="row gap-s"><StatusBadge status={c.status} />{c.issue_type && c.issue_type !== 'wages' && <span className="tag">{t(`issue_${c.issue_type}`)}</span>}{c.unread > 0 && <span className="pill">{t('unreadUpdates', { n: c.unread })}</span>}</div>
                       <strong>{t('fromWorker', { name: c.worker_name })}</strong>
                       <div className="muted small">{c.reference} · {formatDate(c.submitted_at)}</div>
                     </div>

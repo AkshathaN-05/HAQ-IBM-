@@ -85,6 +85,18 @@ export async function openProtectedFile(evidenceId, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 30000)
 }
 
+export async function viewProtectedFile(evidenceId, mimeType) {
+  // Open the file in a new tab so the browser shows it (PDF, photo, audio, video or text).
+  const win = window.open('', '_blank')
+  const res = await api(`/api/evidence/${evidenceId}/download`, { raw: true })
+  const raw = await res.blob()
+  const type = mimeType === 'text/plain' ? 'text/plain;charset=utf-8' : (mimeType || raw.type)
+  const url = URL.createObjectURL(new Blob([raw], { type }))
+  if (win) win.location.href = url
+  else window.location.assign(url)
+  setTimeout(() => URL.revokeObjectURL(url), 120000)
+}
+
 export async function openExport(claimId) {
   const res = await api(`/api/claims/${claimId}/export`, { raw: true })
   const html = await res.text()

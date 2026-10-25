@@ -49,7 +49,7 @@ def inbox(filter: Literal["all", "attention"] = "all", limit: int = Query(20, ge
         where += f" AND status IN ({','.join('?' * len(NEEDS_ATTENTION))})"
         params += list(NEEDS_ATTENTION)
     with ctx.db.connection() as c:
-        rows = c.execute(f"""SELECT cl.id, cl.reference, cl.status, cl.amount_claimed, cl.submitted_at, cl.updated_at,
+        rows = c.execute(f"""SELECT cl.id, cl.reference, cl.status, cl.issue_type, cl.amount_claimed, cl.submitted_at, cl.updated_at,
                                     u.display_name AS worker_name,
                                     (SELECT COUNT(*) FROM notifications n WHERE n.claim_id = cl.id AND n.user_id = ? AND n.read_at IS NULL) AS unread
                              FROM claims cl JOIN users u ON u.id = cl.worker_id

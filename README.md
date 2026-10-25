@@ -1,6 +1,6 @@
 # HAQ — your wages, your right
 
-HAQ (हक़ · ಹಕ್ಕು — "what is rightfully yours") helps informal workers in India explain an unpaid-wage or workplace problem in their own language, keep their proof safe, send a clear complaint to their employer, and follow it through to a settlement and confirmed payment.
+HAQ ("what is rightfully yours") helps informal workers in India explain an unpaid-wage or other workplace problem (safety, harassment, threats, unfair treatment, a co-worker) in their own language, keep their proof safe, send a clear complaint to their employer, and follow it through to a settlement and confirmed payment.
 
 Employers get a clear, organised claim they can answer, with only the evidence the worker chose to share.
 
@@ -27,13 +27,14 @@ In development no mail server is needed: the 6-digit verification code is shown 
 ## What it does
 
 **Workers**
-- Guided 6 steps: describe (type or speak) → add proof → key details → check summary → letter → choose what to share and send.
-- Any mix of photos, screenshots, PDFs, Word files, text, voice notes and videos. Each file is validated, fingerprinted (SHA-256), stored privately and read in the background where possible.
+- Two clear choices on the home page: **Unpaid wages** or **Another problem at work** (no safety equipment, harassment, threats, unfair treatment, a co-worker).
+- Just 4 steps: what happened (type or speak) → add proof → only the needed details → check and send (summary, checks, ready-made letter and sharing on one page).
+- Any mix of photos, screenshots, PDFs, Word files, text, voice notes and videos. Each file is validated, fingerprinted (SHA-256), stored privately and read in the background — voice notes are turned into text offline with Whisper. The worker can see exactly what HAQ read from each file.
 - Automatic checks that point out things to review — never fraud accusations.
 - **13 Indian languages** for screens, voice typing and letter headings (English, Hindi, Bengali, Telugu, Marathi, Tamil, Urdu, Gujarati, Kannada, Malayalam, Odia, Punjabi and Assamese). Workers can also choose **"Another language"** and speak or type in any language at all — their words are kept exactly as given.
 - A complaint letter in the worker's language; every fact editable; nothing sent without explicit confirmation.
 - Track replies, accept or reject offers, confirm or dispute payments, print a full record.
-- Wage calculator (daily, hourly, weekly, monthly, piece, task) and optional work records.
+- A separate History tab, a short **"If your problem is not solved"** guide (Labour Department / SAMADHAN, NALSA 15100, Local Committee / SHe-Box, 181, 112), and optional work records.
 
 **Employers**
 - See only claims sent to their verified email, and only the files shared with them.

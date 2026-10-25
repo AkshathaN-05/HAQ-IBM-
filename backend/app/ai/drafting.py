@@ -39,6 +39,7 @@ class ClaimFacts:
     requested_outcome: str | None
     calculation: dict | None = None
     evidence: list[EvidenceFact] = field(default_factory=list)
+    issue_type: str = "wages"
 
 
 @dataclass
@@ -73,6 +74,28 @@ L = {
 
 def _lbl(lang: str) -> dict:
     return L.get(lang, L["en"])
+
+
+ISSUES = {
+    "en": ("Problem", {"wages": "Unpaid or less wages", "safety": "No safety equipment or unsafe work", "harassment": "Harassment",
+                       "discrimination": "Unfair treatment or discrimination", "threats": "Threats or violence",
+                       "coworkers": "Problem with a co-worker", "other": "Other problem at work"}),
+    "hi": ("समस्या", {"wages": "मज़दूरी नहीं मिली या कम मिली", "safety": "सुरक्षा उपकरण नहीं / असुरक्षित काम", "harassment": "उत्पीड़न",
+                      "discrimination": "भेदभाव या अनुचित व्यवहार", "threats": "धमकी या हिंसा",
+                      "coworkers": "साथी कामगार से समस्या", "other": "काम से जुड़ी दूसरी समस्या"}),
+    "kn": ("ಸಮಸ್ಯೆ", {"wages": "ಸಂಬಳ ಸಿಕ್ಕಿಲ್ಲ ಅಥವಾ ಕಡಿಮೆ ಸಿಕ್ಕಿದೆ", "safety": "ಸುರಕ್ಷತಾ ಸಾಧನಗಳಿಲ್ಲ / ಅಪಾಯಕಾರಿ ಕೆಲಸ", "harassment": "ಕಿರುಕುಳ",
+                     "discrimination": "ತಾರತಮ್ಯ ಅಥವಾ ಅನ್ಯಾಯದ ವರ್ತನೆ", "threats": "ಬೆದರಿಕೆ ಅಥವಾ ಹಿಂಸೆ",
+                     "coworkers": "ಸಹ ಕಾರ್ಮಿಕರೊಂದಿಗೆ ಸಮಸ್ಯೆ", "other": "ಕೆಲಸಕ್ಕೆ ಸಂಬಂಧಿಸಿದ ಇತರ ಸಮಸ್ಯೆ"}),
+}
+
+
+def issue_label(lang: str) -> str:
+    return ISSUES.get(lang, ISSUES["en"])[0]
+
+
+def issue_name(lang: str, issue: str) -> str:
+    names = ISSUES.get(lang, ISSUES["en"])[1]
+    return names.get(issue, ISSUES["en"][1].get(issue, issue))
 
 
 def _rupees(v: str | None) -> str | None:
@@ -147,13 +170,14 @@ def assemble(f: ClaimFacts, narrative: str) -> tuple[str, dict]:
         f"{lb['from']}: {f.worker_name}" + (f" ({f.worker_contact})" if f.worker_contact else ""),
         f"{lb['to']}: {f.employer_name or u}",
         f"{lb['work']}: {f.work_type or u}",
-        f"{lb['period']}: {period}",
+        *([f"{lb['period']}: {period}"] if (f.issue_type == "wages" or f.start_date or f.end_date) else []),
+        f"{issue_label(f.language)}: {issue_name(f.language, f.issue_type)}",
         "",
         f"{lb['what']}:",
         narrative.strip(),
-        "",
-        f"{lb['amount']}: {_rupees(f.amount_claimed) or u}",
     ]
+    if f.issue_type == "wages" or f.amount_claimed:
+        lines += ["", f"{lb['amount']}: {_rupees(f.amount_claimed) or u}"]
     if f.calculation:
         c = f.calculation
         lines.append(f"{lb['calc']}: {_rupees(c['rate'])} × {c['units']} {c['unit_label']} = {_rupees(c['expected_wages'])}; "
@@ -167,6 +191,7 @@ def assemble(f: ClaimFacts, narrative: str) -> tuple[str, dict]:
     lines += ["", f"{lb['outcome']}: {f.requested_outcome or u}", "", lb["disclaimer"]]
     structured = {
         "reference": f.reference,
+        "issue_type": f.issue_type,
         "language": f.language,
         "employer_name": f.employer_name,
         "work_type": f.work_type,

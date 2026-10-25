@@ -28,14 +28,19 @@ router = APIRouter(prefix="/api", tags=["worker"])
 DateStr = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 
 
+IssueType = Literal["wages", "safety", "harassment", "discrimination", "threats", "coworkers", "other"]
+
+
 class ClaimCreate(BaseModel):
     description: str = Field(default="", max_length=8000)
     language: ClaimLang = "en"
+    issue_type: IssueType = "wages"
 
 
 class ClaimUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=8000)
     language: ClaimLang | None = None
+    issue_type: IssueType | None = None
     employer_name: str | None = Field(default=None, max_length=150)
     employer_email: EmailStr | None = None
     work_type: str | None = Field(default=None, max_length=150)
@@ -166,7 +171,7 @@ def update_engagement(eid: str, body: EngagementIn, user: dict = Depends(require
 def list_claims(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
                 user: dict = Depends(require_worker), ctx: AppContext = Depends(get_ctx)):
     with ctx.db.connection() as c:
-        rows = c.execute("""SELECT cl.id, cl.reference, cl.status, cl.employer_name, cl.amount_claimed, cl.created_at, cl.updated_at,
+        rows = c.execute("""SELECT cl.id, cl.reference, cl.status, cl.issue_type, cl.employer_name, cl.amount_claimed, cl.created_at, cl.updated_at,
                                    cl.submitted_at, substr(cl.description, 1, 140) AS preview,
                                    (SELECT COUNT(*) FROM notifications n WHERE n.claim_id = cl.id AND n.user_id = ? AND n.read_at IS NULL) AS unread
                             FROM claims cl WHERE worker_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?""",
@@ -179,8 +184,8 @@ def list_claims(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=
 def create_claim(body: ClaimCreate, user: dict = Depends(require_worker), ctx: AppContext = Depends(get_ctx)):
     cid, now = new_id(), now_iso()
     with ctx.db.transaction() as c:
-        c.execute("""INSERT INTO claims(id, reference, worker_id, status, language, description, created_at, updated_at)
-                     VALUES (?,?,?,?,?,?,?,?)""", (cid, new_reference(), user["id"], "draft", body.language, body.description.strip(), now, now))
+        c.execute("""INSERT INTO claims(id, reference, worker_id, status, language, issue_type, description, created_at, updated_at)
+                     VALUES (?,?,?,?,?,?,?,?,?)""", (cid, new_reference(), user["id"], "draft", body.language, body.issue_type, body.description.strip(), now, now))
         add_event(c, cid, user, "draft_created")
         claim = worker_claim(c, cid, user)
         return claim_view(c, claim, "worker")
@@ -339,7 +344,7 @@ def build_facts(c, claim: dict, user: dict) -> ClaimFacts:
                              status=e["extraction_status"], text=e["extracted_text"] or "") for i, e in enumerate(ev_rows, 1)]
     return ClaimFacts(
         reference=claim["reference"], language=claim["language"], worker_name=user["display_name"],
-        worker_contact=user.get("phone") or "", description=claim["description"] or "",
+        worker_contact=user.get("phone") or "", description=claim["description"] or "", issue_type=claim["issue_type"],
         employer_name=claim["employer_name"], work_type=claim["work_type"], start_date=claim["start_date"],
         end_date=claim["end_date"], amount_claimed=claim["amount_claimed"], requested_outcome=claim["requested_outcome"],
         calculation=engagement_calc(c, claim), evidence=evidence)

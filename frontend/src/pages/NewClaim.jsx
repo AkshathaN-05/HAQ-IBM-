@@ -4,8 +4,10 @@ import { api, newIdempotencyKey, uploadFile } from '../api'
 import { useAuth } from '../auth'
 import { LANGS, useI18n } from '../i18n'
 import { ErrorNote, Field, Money, VerifyEmailCard, errorText, formatDate, useSpeech } from '../components/ui'
+import Icon from '../components/Icon'
 
-const STEPS = 6
+const STEPS = 4
+export const ISSUES = ['wages', 'safety', 'harassment', 'discrimination', 'threats', 'coworkers', 'other']
 const fileSize = (b) => (b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`)
 const localKey = (id) => `haq.localDraft.${id || 'new'}`
 
@@ -30,9 +32,16 @@ function Progress({ step }) {
 }
 
 // ---------- Step 1: describe ----------
-function StepDescribe({ claim, onSaved }) {
+function StepDescribe({ claim, onSaved, initialType }) {
   const { t, lang } = useI18n()
-  const local = readLocal(claim?.id)
+  // The button the worker pressed decides the page; each button keeps its own saved draft on this device.
+  const mode = claim ? (claim.issue_type === 'wages' ? 'wages' : 'problem') : (initialType === 'problem' ? 'problem' : 'wages')
+  const draftKey = claim?.id || `new-${mode}`
+  const local = readLocal(draftKey)
+  // 'wages' = came from "Unpaid wages" (no list shown); 'problem' = came from "Another problem at work" (list without wages)
+  const saved = claim?.issue_type || local?.issue_type
+  const [issue, setIssue] = useState(mode === 'wages' ? 'wages' : (saved && saved !== 'wages' ? saved : ''))
+  const choices = ISSUES.filter((k) => k !== 'wages')
   const [text, setText] = useState(local?.description ?? claim?.description ?? '')
   const [language, setLanguage] = useState(claim?.language || local?.language || lang)
   const [dirty, setDirty] = useState(Boolean(local))
@@ -41,8 +50,8 @@ function StepDescribe({ claim, onSaved }) {
   const speech = useSpeech(language, (chunk) => { setText((prev) => (prev ? prev.trimEnd() + ' ' : '') + chunk); setDirty(true) })
 
   useEffect(() => {
-    if (dirty) writeLocal(claim?.id, { description: text, language })
-  }, [text, language, dirty, claim?.id])
+    if (dirty) writeLocal(draftKey, { description: text, language, issue_type: issue })
+  }, [text, language, issue, dirty, draftKey])
   useEffect(() => {
     if (!dirty) return undefined
     const h = (e) => { e.preventDefault(); e.returnValue = '' }
@@ -54,9 +63,9 @@ function StepDescribe({ claim, onSaved }) {
     setBusy(true); setError(null)
     try {
       const c = claim
-        ? await api(`/api/claims/${claim.id}`, { method: 'PATCH', body: { description: text, language } })
-        : await api('/api/claims', { method: 'POST', body: { description: text, language } })
-      clearLocal(claim?.id); clearLocal(c.id)
+        ? await api(`/api/claims/${claim.id}`, { method: 'PATCH', body: { description: text, language, issue_type: issue } })
+        : await api('/api/claims', { method: 'POST', body: { description: text, language, issue_type: issue } })
+      clearLocal(draftKey); clearLocal(c.id)
       setDirty(false)
       onSaved(c)
     } catch (e) { setError(e) } finally { setBusy(false) }
@@ -66,6 +75,21 @@ function StepDescribe({ claim, onSaved }) {
     <section className="card">
       <h1>{t('s1Title')}</h1>
       <p className="muted">{t('s1Help')}</p>
+      {mode === 'wages' ? (
+        <p className="issue-chosen"><span className="tag">{t('issue_wages')}</span></p>
+      ) : (
+      <fieldset className="issue-picker">
+        <legend>{t('issueTitle')}</legend>
+        <div className="issue-grid">
+          {choices.map((k) => (
+            <label key={k} className={issue === k ? 'issue-option on' : 'issue-option'}>
+              <input type="radio" name="issue" value={k} checked={issue === k} onChange={() => { setIssue(k); setDirty(true) }} />
+              <span>{t(`issue_${k}`)}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      )}
       <div className="row gap">
         <label className="lang-picker">
           <span>{t('language')}</span>
@@ -76,25 +100,25 @@ function StepDescribe({ claim, onSaved }) {
         </label>
         {speech.supported ? (
           <button type="button" className={speech.listening ? 'btn btn-mic on' : 'btn btn-mic'} onClick={speech.listening ? speech.stop : speech.start} aria-pressed={speech.listening}>
-            <span aria-hidden="true">🎙️</span> {speech.listening ? t('stopSpeaking') : t('speak')}
+            <Icon name="mic" size={18} /> {speech.listening ? t('stopSpeaking') : t('speak')}
           </button>
         ) : <p className="muted small">{t('speechUnsupported')}</p>}
       </div>
-      <p className="hint">🌐 {t('anyLanguageNote')}{language === 'other' ? ` ${t('otherLanguageNote')}` : ''}</p>
+      <p className="hint">{t('anyLanguageNote')}{language === 'other' ? ` ${t('otherLanguageNote')}` : ''}</p>
       {speech.listening && <p className="note note-live" role="status">{t('listening')}</p>}
       <label htmlFor="desc" className="sr-only">{t('s1Title')}</label>
-      <textarea id="desc" rows={8} maxLength={8000} value={text} placeholder={t('s1Placeholder')}
+      <textarea id="desc" rows={8} maxLength={8000} value={text} placeholder={mode === 'wages' ? t('s1Placeholder') : t('s1PlaceholderOther')}
         onChange={(e) => { setText(e.target.value); setDirty(true) }} />
       {speech.supported && <p className="hint">{t('speechNote')}</p>}
       {dirty && (
         <p className="hint row gap-s">
-          <span>💾 {t('localDraftSaved')}</span>
-          <button type="button" className="link-btn" onClick={() => { clearLocal(claim?.id); setText(claim?.description || ''); setDirty(false) }}>{t('deleteLocalDraft')}</button>
+          <span>{t('localDraftSaved')}</span>
+          <button type="button" className="link-btn" onClick={() => { clearLocal(draftKey); setText(claim?.description || ''); setDirty(false) }}>{t('deleteLocalDraft')}</button>
         </p>
       )}
       <ErrorNote error={error} onRetry={save} />
       <div className="row end">
-        <button type="button" className="btn btn-primary" disabled={busy || text.trim().length < 10} onClick={save}>{busy ? t('saving') : t('next')}</button>
+        <button type="button" className="btn btn-primary" disabled={busy || !issue || text.trim().length < 10} onClick={save}>{busy ? t('saving') : t('next')}</button>
       </div>
     </section>
   )
@@ -106,6 +130,8 @@ function EvidenceItem({ ev, claimId, onChanged }) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(ev.extracted_text || '')
   const [error, setError] = useState(null)
+  // Files are read in the background, so refresh the box once the text arrives (unless the worker is typing in it).
+  useEffect(() => { if (!editing) setText(ev.extracted_text || '') }, [ev.extracted_text, editing])
   const label = { pending: t('reading'), done: t('readDone'), unsupported: t('readUnsupported'), failed: t('readFailed') }[ev.extraction_status]
   const save = async () => {
     setError(null)
@@ -119,7 +145,7 @@ function EvidenceItem({ ev, claimId, onChanged }) {
           <div className="muted small">{ev.kind} · {fileSize(ev.size_bytes)} · <span className={`ex ex-${ev.extraction_status}`}>{label}</span></div>
         </div>
         {(ev.extraction_status === 'done' || ev.extraction_status === 'failed' || ev.extraction_status === 'unsupported') && (
-          <button type="button" className="btn btn-small btn-ghost" onClick={() => setEditing((e) => !e)}>{t('editText')}</button>
+          <button type="button" className="btn btn-small btn-ghost" aria-expanded={editing} onClick={() => { if (!editing) setText(ev.extracted_text || ''); setEditing((e) => !e) }}>{editing ? t('hideText') : t('editText')}</button>
         )}
       </div>
       {ev.extraction_error && <p className="muted small">{ev.extraction_error}</p>}
@@ -128,7 +154,7 @@ function EvidenceItem({ ev, claimId, onChanged }) {
       {editing && (
         <div className="stack-s">
           <label htmlFor={`t-${ev.id}`} className="small">{t('textFromFile')}</label>
-          <textarea id={`t-${ev.id}`} rows={5} value={text} onChange={(e) => setText(e.target.value)} />
+          <textarea id={`t-${ev.id}`} rows={Math.min(14, Math.max(4, text.split('\n').length + 1))} value={text} onChange={(e) => setText(e.target.value)} />
           <ErrorNote error={error} />
           <div className="row end"><button type="button" className="btn btn-small btn-primary" onClick={save}>{t('saveText')}</button></div>
         </div>
@@ -210,27 +236,26 @@ function StepEvidence({ claim, refresh, setClaim, next, back }) {
   )
 }
 
-// ---------- Step 3: key details ----------
+// ---------- Step 3: key details (only what is needed) ----------
 function StepDetails({ claim, setClaim, next, back }) {
   const { t } = useI18n()
+  const wages = claim.issue_type === 'wages'
   const [f, setF] = useState({
     employer_name: claim.employer_name || '', employer_email: claim.employer_email || '', work_type: claim.work_type || '',
     start_date: claim.start_date || '', end_date: claim.end_date || '', amount_claimed: claim.amount_claimed ? String(Number(claim.amount_claimed)) : '',
-    requested_outcome: claim.requested_outcome || '', engagement_id: claim.engagement_id || '',
+    requested_outcome: claim.requested_outcome || t(`outcome_${claim.issue_type || 'wages'}`),
   })
-  const [records, setRecords] = useState([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  useEffect(() => { api('/api/worker/engagements').then((d) => setRecords(d.items)).catch(() => {}) }, [])
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
   const amounts = useMemo(() => [...new Set(claim.evidence.flatMap((e) => e.found_amounts || []))].slice(0, 6), [claim.evidence])
   const dates = useMemo(() => [...new Set(claim.evidence.flatMap((e) => e.found_dates || []))].sort().slice(0, 6), [claim.evidence])
-  const linked = records.find((r) => r.id === f.engagement_id)
 
   const save = async () => {
     setBusy(true); setError(null)
     const body = {}
     for (const [k, v] of Object.entries(f)) body[k] = v.trim() === '' ? null : v.trim()
+    if (!wages) delete body.amount_claimed
     try { setClaim(await api(`/api/claims/${claim.id}`, { method: 'PATCH', body })); next() } catch (e) { setError(e) } finally { setBusy(false) }
   }
   const fe = (name) => error?.details?.field === name || error?.details?.fields?.some((x) => x.field === name)
@@ -246,12 +271,12 @@ function StepDetails({ claim, setClaim, next, back }) {
         <Field label={t('employerName')} id="en"><input id="en" maxLength={150} value={f.employer_name} onChange={set('employer_name')} /></Field>
         <Field label={t('employerEmail')} id="ee"><input id="ee" type="email" value={f.employer_email} onChange={set('employer_email')} aria-invalid={fe('employer_email')} /></Field>
         <Field label={t('workType')} id="wt"><input id="wt" maxLength={150} value={f.work_type} onChange={set('work_type')} /></Field>
-        <Field label={t('amountClaimed')} id="am">
-          <input id="am" inputMode="decimal" value={f.amount_claimed} onChange={set('amount_claimed')} aria-invalid={fe('amount_claimed')} />
-          <Suggest items={amounts} onPick={(v) => setF((x) => ({ ...x, amount_claimed: String(Number(v)) }))} fmt={(v) => `₹${Number(v).toLocaleString('en-IN')}`} />
-          {linked?.calculation && <button type="button" className="chip" onClick={() => setF((x) => ({ ...x, amount_claimed: String(Number(linked.calculation.potential_outstanding)) }))}>
-            {t('outstanding')}: <Money value={linked.calculation.potential_outstanding} /></button>}
-        </Field>
+        {wages && (
+          <Field label={t('amountClaimed')} id="am">
+            <input id="am" inputMode="decimal" value={f.amount_claimed} onChange={set('amount_claimed')} aria-invalid={fe('amount_claimed')} />
+            <Suggest items={amounts} onPick={(v) => setF((x) => ({ ...x, amount_claimed: String(Number(v)) }))} fmt={(v) => `₹${Number(v).toLocaleString('en-IN')}`} />
+          </Field>
+        )}
         <Field label={t('startDate')} id="sd">
           <input id="sd" type="date" value={f.start_date} onChange={set('start_date')} />
           <Suggest items={dates} onPick={(v) => setF((x) => ({ ...x, start_date: v }))} fmt={formatDate} />
@@ -261,15 +286,7 @@ function StepDetails({ claim, setClaim, next, back }) {
           <Suggest items={dates} onPick={(v) => setF((x) => ({ ...x, end_date: v }))} fmt={formatDate} />
         </Field>
       </div>
-      <Field label={t('outcome')} id="oc"><textarea id="oc" rows={2} maxLength={1000} placeholder={t('outcomePlaceholder')} value={f.requested_outcome} onChange={set('requested_outcome')} /></Field>
-      {records.length > 0 && (
-        <Field label={t('linkRecord')} id="lr">
-          <select id="lr" value={f.engagement_id} onChange={set('engagement_id')}>
-            <option value="">{t('noLink')}</option>
-            {records.map((r) => <option key={r.id} value={r.id}>{r.employer_name} — {r.work_type}</option>)}
-          </select>
-        </Field>
-      )}
+      <Field label={t('outcome')} id="oc"><textarea id="oc" rows={2} maxLength={1000} value={f.requested_outcome} onChange={set('requested_outcome')} /></Field>
       <ErrorNote error={error} />
       <div className="row between">
         <button type="button" className="btn btn-ghost" onClick={back}>{t('back')}</button>
@@ -295,127 +312,73 @@ export function ChecksList({ checks }) {
   )
 }
 
-function StepSummary({ claim, next, back }) {
-  const { t } = useI18n()
-  const m = <em className="missing">{t('missing')}</em>
-  return (
-    <section className="card">
-      <h1>{t('s4Title')}</h1>
-      <p className="muted">{t('s4Help')}</p>
-      <dl className="summary">
-        <dt>{t('whatHappened')}</dt><dd className="pre">{claim.description}</dd>
-        <dt>{t('employerNameShort')}</dt><dd>{claim.employer_name || m}{claim.employer_email && <span className="muted"> · {claim.employer_email}</span>}</dd>
-        <dt>{t('workAndDates')}</dt><dd>{claim.work_type || m} · {claim.start_date ? formatDate(claim.start_date) : m} – {claim.end_date ? formatDate(claim.end_date) : m}</dd>
-        <dt>{t('amount')}</dt><dd>{claim.amount_claimed ? <Money value={claim.amount_claimed} /> : m}
-          {claim.calculation && <div className="muted small">{claim.calculation.formula}</div>}</dd>
-        <dt>{t('outcome')}</dt><dd>{claim.requested_outcome || m}</dd>
-        <dt>{t('evidence')}</dt><dd>{claim.evidence.length ? claim.evidence.map((e) => `${e.label}. ${e.original_name}`).join(' · ') : m}</dd>
-      </dl>
-      <h2>{t('checksTitle')}</h2>
-      <p className="muted small">{t('checksHelp')}</p>
-      <ChecksList checks={claim.checks} />
-      <div className="row between">
-        <button type="button" className="btn btn-ghost" onClick={back}>{t('back')}</button>
-        <button type="button" className="btn btn-primary" onClick={next}>{t('next')}</button>
-      </div>
-    </section>
-  )
-}
-
-// ---------- Step 5: complaint draft ----------
-function StepDraft({ claim, setClaim, next, back }) {
-  const { t } = useI18n()
-  const [text, setText] = useState(claim.complaint_text || '')
-  const [meta, setMeta] = useState(claim.latest_draft ? { ...claim.latest_draft, warnings: [] } : null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState(null)
-  const generate = async () => {
-    setBusy(true); setError(null)
-    try {
-      const d = await api(`/api/claims/${claim.id}/draft`, { method: 'POST' })
-      setClaim(d.claim); setText(d.draft.text); setMeta(d.draft)
-    } catch (e) { setError(e) } finally { setBusy(false) }
-  }
-  const proceed = async () => {
-    setBusy(true); setError(null)
-    try {
-      if (text !== (claim.complaint_text || '')) setClaim(await api(`/api/claims/${claim.id}`, { method: 'PATCH', body: { complaint_text: text } }))
-      next()
-    } catch (e) { setError(e) } finally { setBusy(false) }
-  }
-  const facts = meta?.structured?.key_facts || []
-  return (
-    <section className="card">
-      <h1>{t('s5Title')}</h1>
-      <p className="muted">{t('s5Help')}</p>
-      <button type="button" className="btn btn-primary" onClick={generate} disabled={busy}>{busy ? t('preparing') : text ? t('remakeDraft') : t('makeDraft')}</button>
-      {meta?.source === 'ai' && (
-        <p className="note note-ai">
-          {t('draftByAi', { provider: meta.provider === 'ibm-watsonx' ? 'IBM Granite on watsonx.ai' : 'IBM Granite (local)', model: meta.model })}
-        </p>
-      )}
-      <ErrorNote error={error} />
-      {text && (
-        <>
-          <label htmlFor="complaint" className="sr-only">{t('s5Title')}</label>
-          <textarea id="complaint" className="letter" rows={18} value={text} onChange={(e) => setText(e.target.value)} />
-        </>
-      )}
-      {facts.length > 0 && (
-        <details className="facts">
-          <summary>{t('keyFacts')}</summary>
-          <table>
-            <tbody>
-              {facts.map((f) => (
-                <tr key={f.fact}>
-                  <th scope="row">{f.fact.replaceAll('_', ' ')}</th>
-                  <td>{f.value || <em className="missing">{t('missing')}</em>}</td>
-                  <td className="muted small">{f.value ? t('fromYou') : ''}{f.mentioned_in_evidence?.length > 0 && ` · ${t('alsoIn', { files: f.mentioned_in_evidence.join(', ') })}`}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </details>
-      )}
-      <div className="row between">
-        <button type="button" className="btn btn-ghost" onClick={back}>{t('back')}</button>
-        <button type="button" className="btn btn-primary" onClick={proceed} disabled={busy || text.trim().length < 20}>{t('next')}</button>
-      </div>
-    </section>
-  )
-}
-
-// ---------- Step 6: share & send ----------
-function StepSend({ claim, back }) {
+// ---------- Step 4: check and send (summary, checks, letter and sharing on one page) ----------
+function StepReview({ claim, setClaim, back }) {
   const { t } = useI18n()
   const { user } = useAuth()
   const nav = useNavigate()
-  const [shared, setShared] = useState(() => new Set(claim.evidence.filter((e) => e.shared_with_employer).map((e) => e.id)))
-  const [notes, setNotes] = useState(claim.private_notes || '')
+  const [text, setText] = useState(claim.complaint_text || '')
+  const [meta, setMeta] = useState(null)
+  const [drafting, setDrafting] = useState(false)
+  const [shared, setShared] = useState(() => new Set(claim.evidence.map((e) => e.id)))
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const key = useRef(newIdempotencyKey()) // reused on retry so a double-tap cannot send twice
+  const started = useRef(false)
   const toggle = (id) => setShared((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
+
+  const generate = useCallback(async () => {
+    setDrafting(true); setError(null)
+    try {
+      const d = await api(`/api/claims/${claim.id}/draft`, { method: 'POST' })
+      setClaim(d.claim); setText(d.draft.text); setMeta(d.draft)
+    } catch (e) { setError(e) } finally { setDrafting(false) }
+  }, [claim.id, setClaim])
+  // The letter is prepared automatically the first time this step opens.
+  useEffect(() => { if (!started.current && !claim.complaint_text) { started.current = true; generate() } }, [claim.complaint_text, generate])
 
   const send = async () => {
     setBusy(true); setError(null)
     try {
-      if (notes !== (claim.private_notes || '')) await api(`/api/claims/${claim.id}`, { method: 'PATCH', body: { private_notes: notes } })
+      if (text !== (claim.complaint_text || '')) await api(`/api/claims/${claim.id}`, { method: 'PATCH', body: { complaint_text: text } })
       await api(`/api/claims/${claim.id}/submit`, {
         method: 'POST', headers: { 'Idempotency-Key': key.current },
-        body: { confirm: true, complaint_text: claim.complaint_text, shared_evidence_ids: [...shared] },
+        body: { confirm: true, complaint_text: text, shared_evidence_ids: [...shared] },
       })
       // Navigate only after the server confirmed the submission.
       nav(`/worker/claims/${claim.id}`, { replace: true, state: { justSent: true } })
     } catch (e) { setError(e) } finally { setBusy(false) }
   }
   const blocked = !user.email_verified ? t('needVerify') : !claim.employer_email ? t('needEmployerEmail') : null
+  const m = <em className="missing">{t('missing')}</em>
   return (
     <section className="card">
-      <h1>{t('s6Title')}</h1>
-      <p className="muted">{t('s6Help')}</p>
-      <pre className="letter-preview">{claim.complaint_text}</pre>
+      <h1>{t('reviewTitle')}</h1>
+      <p className="muted">{t('reviewHelp')}</p>
+      <dl className="summary">
+        <dt>{t('issueTitle')}</dt><dd>{t(`issue_${claim.issue_type || 'wages'}`)}</dd>
+        <dt>{t('employerNameShort')}</dt><dd>{claim.employer_name || m}{claim.employer_email && <span className="muted"> · {claim.employer_email}</span>}</dd>
+        {claim.issue_type === 'wages' && <><dt>{t('amount')}</dt><dd>{claim.amount_claimed ? <Money value={claim.amount_claimed} /> : m}</dd></>}
+      </dl>
+      <h2>{t('checksTitle')}</h2>
+      <ChecksList checks={claim.checks} />
+
+      <div className="row between wrap">
+        <h2>{t('s5Title')}</h2>
+        <button type="button" className="btn btn-ghost btn-small" onClick={generate} disabled={drafting}>{drafting ? t('preparing') : t('remakeDraft')}</button>
+      </div>
+      {meta?.source === 'ai' && (
+        <p className="note note-ai">{t('draftByAi', { provider: meta.provider === 'ibm-watsonx' ? 'IBM Granite on watsonx.ai' : 'IBM Granite (local)', model: meta.model })}</p>
+      )}
+      {drafting && !text && <p className="muted">{t('preparing')}</p>}
+      {text && (
+        <>
+          <label htmlFor="complaint" className="sr-only">{t('s5Title')}</label>
+          <textarea id="complaint" className="letter" rows={16} value={text} onChange={(e) => setText(e.target.value)} />
+        </>
+      )}
+
       {claim.evidence.length > 0 && (
         <fieldset className="share-list">
           <legend>{t('evidence')}</legend>
@@ -427,7 +390,6 @@ function StepSend({ claim, back }) {
           ))}
         </fieldset>
       )}
-      <Field label={t('privateNotes')} id="pn"><textarea id="pn" rows={2} maxLength={4000} value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
       <VerifyEmailCard />
       {blocked && <p className="note note-warn">{blocked}</p>}
       <label className="check-row confirm">
@@ -437,7 +399,7 @@ function StepSend({ claim, back }) {
       <ErrorNote error={error} />
       <div className="row between">
         <button type="button" className="btn btn-ghost" onClick={back}>{t('back')}</button>
-        <button type="button" className="btn btn-primary" disabled={!confirm || busy || Boolean(blocked)} onClick={send}>{busy ? t('sending') : t('sendClaim')}</button>
+        <button type="button" className="btn btn-primary" disabled={!confirm || busy || drafting || Boolean(blocked) || text.trim().length < 20} onClick={send}>{busy ? t('sending') : t('sendClaim')}</button>
       </div>
     </section>
   )
@@ -467,17 +429,15 @@ export default function NewClaim() {
 
   const common = { claim, setClaim, refresh, next: () => go(step + 1), back: () => go(step - 1) }
   return (
-    <div className="stack">
+    <div className="stack wizard">
       <div className="row between">
         <Progress step={step} />
         {claim && <Link to="/worker" className="small">{t('saveDraftExit')}</Link>}
       </div>
-      {step === 0 && <StepDescribe claim={claim} onSaved={(c) => { setClaim(c); if (!id) nav(`/worker/claims/${c.id}/edit?step=1`, { replace: true }); else go(1) }} />}
+      {step === 0 && <StepDescribe claim={claim} initialType={params.get('type') || undefined} onSaved={(c) => { setClaim(c); if (!id) nav(`/worker/claims/${c.id}/edit?step=1`, { replace: true }); else go(1) }} />}
       {step === 1 && claim && <StepEvidence {...common} />}
       {step === 2 && claim && <StepDetails {...common} />}
-      {step === 3 && claim && <StepSummary {...common} />}
-      {step === 4 && claim && <StepDraft {...common} />}
-      {step === 5 && claim && <StepSend {...common} />}
+      {step === 3 && claim && <StepReview {...common} />}
     </div>
   )
 }

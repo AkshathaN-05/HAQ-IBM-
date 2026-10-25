@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import { useI18n } from '../i18n'
 import { formatDate, LanguagePicker } from './ui'
+import Icon from './Icon'
 
 function Notifications() {
   const { user } = useAuth()
@@ -61,35 +62,30 @@ export default function Layout({ children }) {
   const { user, signOut } = useAuth()
   const { t } = useI18n()
   const nav = useNavigate()
+  const loc = useLocation()
   const home = user ? (user.role === 'worker' ? '/worker' : '/employer') : '/'
-  const out = async (all) => {
-    if (all) await api('/api/auth/logout-all', { method: 'POST' }).catch(() => {})
-    signOut()
-    nav('/')
-  }
+  const out = () => { signOut(); nav('/') }
+  const atHome = loc.pathname === home
   return (
     <div className="shell">
       <a href="#main" className="skip">Skip to content</a>
       <header className="topbar">
-        <Link to={home} className="brand" aria-label="HAQ home">
-          <span className="brand-mark" aria-hidden="true">ह</span>
-          <span className="brand-name">HAQ</span>
-          {user && <span className="portal-tag">{user.role === 'worker' ? t('workerPortal') : t('employerPortal')}</span>}
-        </Link>
-        <div className="topbar-right">
-          <LanguagePicker compact />
-          {user && <Notifications />}
-          {user && (
-            <details className="menu">
-              <summary aria-label="Account menu">{user.display_name.slice(0, 1).toUpperCase()}</summary>
-              <div className="menu-panel">
-                <p className="small muted">{user.email}</p>
-                <Link to="/help">{t('help')}</Link>
-                <button type="button" className="link-btn" onClick={() => out(false)}>{t('signOut')}</button>
-                <button type="button" className="link-btn" onClick={() => out(true)}>{t('signOutAll')}</button>
-              </div>
-            </details>
-          )}
+        <div className="topbar-inner">
+          <Link to={home} className="brand" aria-label="HAQ home">
+            <span className="brand-mark" aria-hidden="true"><Icon name="scale" size={24} /></span>
+            <span className="brand-text">
+              <span className="brand-name">HAQ</span>
+              <span className="brand-tag">{t('appTagline')}</span>
+            </span>
+          </Link>
+          <div className="topbar-right">
+            <LanguagePicker compact />
+            {user && <span className="top-email">{user.email}</span>}
+            {user && <span className="portal-tag">{user.role === 'worker' ? t('workerPortal') : t('employerPortal')}</span>}
+            {user && <Notifications />}
+            {user && !atHome && <Link to={home} className="btn btn-ghost btn-small top-btn top-home">← {t('home')}</Link>}
+            {user && <button type="button" className="btn btn-ghost btn-small top-btn" onClick={out}>{t('signOut')}</button>}
+          </div>
         </div>
       </header>
       <main id="main" className="content">{children}</main>

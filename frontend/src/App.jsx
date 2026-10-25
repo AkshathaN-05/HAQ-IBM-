@@ -11,7 +11,7 @@ import NewClaim from './pages/NewClaim'
 import ClaimDetail from './pages/ClaimDetail'
 import ClaimsList from './pages/ClaimsList'
 import WorkRecords from './pages/WorkRecords'
-import WageCalculator from './pages/WageCalculator'
+import Guide from './pages/Guide'
 import Help from './pages/Help'
 import EmployerInbox from './pages/EmployerInbox'
 import EmployerClaim from './pages/EmployerClaim'
@@ -77,7 +77,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/help" element={<Help />} />
-              <Route path="/wages" element={<WageCalculator />} />
+              <Route path="/guide" element={<Guide />} />
               <Route path="/:portal/sign-in" element={<AuthPage mode="login" />} />
               <Route path="/:portal/register" element={<AuthPage mode="register" />} />
               <Route path="/:portal/forgot" element={<AuthPage mode="forgot" />} />
