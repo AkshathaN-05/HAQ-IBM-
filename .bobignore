@@ -1,0 +1,4 @@
+# Files IBM Bob should not read (secrets and private data)
+.env
+backend/.env
+backend/data/
