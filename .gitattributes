@@ -1,0 +1,12 @@
+# Keep these files exactly as they are (no line-ending changes)
+*.pdf binary
+*.mp3 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pptx binary
+*.docx binary
+*.zip binary
+
+# Windows scripts need Windows line endings
+*.bat text eol=crlf
