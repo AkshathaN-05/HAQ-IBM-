@@ -53,7 +53,8 @@ def register_and_verify(page, portal, who):
     page.get_by_label("Password").fill(who["password"])
     page.get_by_role("button", name="Create account").click()
     expect(page.get_by_text("Confirm your email")).to_be_visible()
-    code_text = page.locator(".dev-box pre").inner_text(timeout=10000)
+    expect(page.locator(".dev-box pre")).to_contain_text("code is", timeout=10000)
+    code_text = page.locator(".dev-box pre").inner_text()
     code = "".join(ch for ch in code_text.split("code is")[1] if ch.isdigit())[:6]
     page.get_by_label("6-digit code").fill(code)
     page.get_by_role("button", name="Confirm", exact=True).click()

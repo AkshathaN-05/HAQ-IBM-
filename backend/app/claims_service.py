@@ -84,6 +84,13 @@ def claim_view(c: sqlite3.Connection, claim: dict, role: str) -> dict:
         "SELECT id, author_role, kind, body, created_at FROM messages WHERE claim_id = ? ORDER BY created_at", (cid,))]
     view["settlements"] = [dict(r) for r in c.execute(
         "SELECT id, amount, currency, explanation, expires_on, status, decided_at, decision_note, created_at FROM settlements WHERE claim_id = ? ORDER BY created_at", (cid,))]
+    view["action_plans"] = []
+    for r in c.execute("""SELECT id, actions, custom_action, contact_name, contact_phone, contact_email, due_on, note, status,
+                                 decided_at, decision_note, done_at, done_note, worker_confirmation, worker_note, created_at
+                          FROM action_plans WHERE claim_id = ? ORDER BY created_at""", (cid,)):
+        d = dict(r)
+        d["actions"] = json.loads(d["actions"] or "[]")
+        view["action_plans"].append(d)
     view["payments"] = [dict(r) for r in c.execute(
         "SELECT id, settlement_id, amount, currency, paid_on, reference, receipt_evidence_id, worker_confirmation, worker_note, created_at FROM payments WHERE claim_id = ? ORDER BY created_at", (cid,))]
     events = []

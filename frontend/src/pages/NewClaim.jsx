@@ -45,6 +45,9 @@ function StepDescribe({ claim, onSaved, initialType }) {
   const [text, setText] = useState(local?.description ?? claim?.description ?? '')
   const [language, setLanguage] = useState(claim?.language || local?.language || lang)
   const [dirty, setDirty] = useState(Boolean(local))
+  const [langPicked, setLangPicked] = useState(Boolean(claim?.language || local?.language))
+  // Voice typing follows the app language until the worker chooses a language here.
+  useEffect(() => { if (!langPicked) setLanguage(lang) }, [lang, langPicked])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const speech = useSpeech(language, (chunk) => { setText((prev) => (prev ? prev.trimEnd() + ' ' : '') + chunk); setDirty(true) })
@@ -93,7 +96,7 @@ function StepDescribe({ claim, onSaved, initialType }) {
       <div className="row gap">
         <label className="lang-picker">
           <span>{t('language')}</span>
-          <select value={language} onChange={(e) => { setLanguage(e.target.value); setDirty(true) }}>
+          <select value={language} onChange={(e) => { setLanguage(e.target.value); setLangPicked(true); setDirty(true) }}>
             {LANGS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
             <option value="other">{t('otherLanguage')}</option>
           </select>

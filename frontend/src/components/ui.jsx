@@ -30,9 +30,73 @@ export function Field({ label, hint, children, id }) {
   )
 }
 
-export function StatusBadge({ status }) {
+const PLAN_STATUSES = ['settlement_offered', 'settlement_accepted', 'payment_pending']
+
+export function StatusBadge({ status, issue }) {
   const { t } = useI18n()
-  return <span className={`badge badge-${status}`}>{t(`st_${status}`)}</span>
+  // For problems that are not about money, offer/payment steps are an action plan instead.
+  const key = issue && issue !== 'wages' && PLAN_STATUSES.includes(status) ? `stp_${status}` : `st_${status}`
+  return <span className={`badge badge-${status}`}>{t(key)}</span>
+}
+
+// The complaint letter shown as a clean document: title, bold labels and a quiet footer note.
+export function LetterView({ text }) {
+  if (!text) return <div className="letter-doc muted">—</div>
+  const lines = text.split('\n')
+  const last = lines.length - 1 - [...lines].reverse().findIndex((l) => l.trim())
+  return (
+    <article className="letter-doc">
+      {lines.map((line, i) => {
+        if (i === 0) return <h3 key={i} className="letter-title">{line}</h3>
+        if (!line.trim()) return <div key={i} className="letter-gap" />
+        if (i === last && line.length > 80) return <p key={i} className="letter-foot">{line}</p>
+        if (/^\s{2,}\S/.test(line)) return <p key={i} className="letter-item">{line.trim()}</p>
+        const m = line.match(/^([^:]{1,48}):\s?(.*)$/)
+        if (m && !m[2]) return <p key={i} className="letter-section">{m[1]}</p>
+        if (m) return <p key={i} className="letter-row"><span className="letter-label">{m[1]}</span><span>{m[2]}</span></p>
+        return <p key={i} className="letter-text">{line}</p>
+      })}
+    </article>
+  )
+}
+
+// A text box with voice typing. The speaking language follows the app language unless the person picks another.
+export function VoiceTextarea({ id, value, onChange, rows = 3, placeholder, maxLength = 4000, label }) {
+  const { t, lang } = useI18n()
+  const [speechLang, setSpeechLang] = useState(lang)
+  const [picked, setPicked] = useState(false)
+  useEffect(() => { if (!picked) setSpeechLang(lang) }, [lang, picked])
+  const valueRef = useRef(value)
+  valueRef.current = value
+  const speech = useSpeech(speechLang, (chunk) => onChange((valueRef.current ? valueRef.current.trimEnd() + ' ' : '') + chunk))
+  return (
+    <div className="voice-box">
+      {label && <label htmlFor={id} className="voice-label">{label}</label>}
+      <textarea id={id} rows={rows} maxLength={maxLength} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+      <div className="voice-tools">
+        {speech.supported ? (
+          <>
+            <select className="voice-lang" aria-label={t('voiceLang')} value={speechLang} onChange={(e) => { setSpeechLang(e.target.value); setPicked(true) }}>
+              {LANGS.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+            </select>
+            <button type="button" className={speech.listening ? 'btn btn-mic btn-small on' : 'btn btn-mic btn-small'} aria-pressed={speech.listening}
+              onClick={speech.listening ? speech.stop : speech.start}>
+              <MicIcon /> {speech.listening ? t('stopSpeaking') : t('speak')}
+            </button>
+          </>
+        ) : <span className="muted small">{t('speechUnsupported')}</span>}
+      </div>
+      {speech.listening && <p className="note note-live" role="status">{t('listening')}</p>}
+    </div>
+  )
+}
+
+function MicIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-7 9a7 7 0 0 0 14 0M12 19v3" />
+    </svg>
+  )
 }
 
 export function Money({ value }) {
@@ -92,6 +156,8 @@ export function useSpeech(speechLang, onText) {
   cbRef.current = onText
 
   useEffect(() => () => recRef.current?.abort?.(), [])
+  // If the language changes while listening, stop; the next press records in the new language.
+  useEffect(() => { recRef.current?.abort?.(); setListening(false) }, [lang])
 
   const start = () => {
     if (!SR) return

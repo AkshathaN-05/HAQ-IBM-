@@ -523,3 +523,33 @@ def decide_payment(cid: str, pid: str, decision: Literal["confirm", "dispute"], 
         add_event(c, cid, user, f"payment_{decision}ed", {"amount": p["amount"]})
         notify(c, _employer_id(c, claim), cid, f"payment_{decision}ed", f"pay-{decision}:{pid}")
         return claim_view(c, worker_claim(c, cid, user), "worker")
+
+
+@router.post("/claims/{cid}/action-plans/{pid}/{decision}")
+def decide_action_plan(cid: str, pid: str, decision: Literal["accept", "reject", "confirm", "dispute"], body: NoteIn,
+                       user: dict = Depends(require_worker), ctx: AppContext = Depends(get_ctx)):
+    with ctx.db.transaction() as c:
+        claim = worker_claim(c, cid, user)
+        plan = c.execute("SELECT * FROM action_plans WHERE id = ? AND claim_id = ?", (pid, cid)).fetchone()
+        if plan is None:
+            raise ApiError(404, "not_found", "Action plan not found.")
+        if decision in ("accept", "reject"):
+            nxt = claim_state.check(f"{decision}_settlement", "worker", claim["status"])
+            if plan["status"] != "proposed":
+                raise ApiError(409, "plan_not_open", "This plan is no longer open.")
+            c.execute("UPDATE action_plans SET status = ?, decided_at = ?, decision_note = ? WHERE id = ?",
+                      ("accepted" if decision == "accept" else "rejected", now_iso(), body.note, pid))
+            event = f"action_plan_{decision}ed"
+        else:
+            nxt = claim_state.check(f"{decision}_payment", "worker", claim["status"])
+            if plan["status"] != "done" or plan["worker_confirmation"] != "pending":
+                raise ApiError(409, "already_decided", "You have already answered about these actions.")
+            c.execute("UPDATE action_plans SET worker_confirmation = ?, worker_note = ? WHERE id = ?",
+                      ("confirmed" if decision == "confirm" else "disputed", body.note, pid))
+            if decision == "confirm":
+                nxt = "resolved"
+            event = f"actions_{decision}ed"
+        c.execute("UPDATE claims SET status = ?, updated_at = ? WHERE id = ?", (nxt, now_iso(), cid))
+        add_event(c, cid, user, event, {})
+        notify(c, _employer_id(c, claim), cid, event, f"{event}:{pid}")
+        return claim_view(c, worker_claim(c, cid, user), "worker")

@@ -13,7 +13,7 @@ export function ClaimRow({ c }) {
     <li>
       <Link to={to} className="claim-row">
         <div>
-          <div className="row gap-s"><StatusBadge status={c.status} />{c.issue_type && c.issue_type !== 'wages' && <span className="tag">{t(`issue_${c.issue_type}`)}</span>}{c.unread > 0 && <span className="pill">{t('unreadUpdates', { n: c.unread })}</span>}</div>
+          <div className="row gap-s"><StatusBadge status={c.status} issue={c.issue_type} />{c.issue_type && c.issue_type !== 'wages' && <span className="tag">{t(`issue_${c.issue_type}`)}</span>}{c.unread > 0 && <span className="pill">{t('unreadUpdates', { n: c.unread })}</span>}</div>
           <strong>{c.employer_name || c.reference}</strong>
           <p className="muted small clamp">{c.preview}</p>
         </div>

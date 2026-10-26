@@ -5,6 +5,7 @@ import { createContext, useContext } from 'react'
 
 import { as_, bn, gu, knExtra, ml, mr, or, pa, ta, te, ur } from './i18n_more'
 import { EXTRA } from './i18n_extra'
+import { PLAN_TEXT } from './i18n_plan'
 
 // Screens and voice typing. Voice typing uses the browser's speech service (needs internet);
 // support for some languages (e.g. Odia, Assamese) depends on the browser.
@@ -765,13 +766,15 @@ const kn = {
 }
 
 const DICTS = {
-  en, hi, kn: { ...knExtra, ...kn },
-  bn: { ...bn, ...EXTRA.bn }, te: { ...te, ...EXTRA.te }, mr: { ...mr, ...EXTRA.mr }, ta: { ...ta, ...EXTRA.ta }, ur: { ...ur, ...EXTRA.ur },
-  gu: { ...gu, ...EXTRA.gu }, ml: { ...ml, ...EXTRA.ml }, or: { ...or, ...EXTRA.or }, pa: { ...pa, ...EXTRA.pa }, as: { ...as_, ...EXTRA.as },
+  en: { ...en, ...PLAN_TEXT.en }, hi: { ...hi, ...PLAN_TEXT.hi }, kn: { ...knExtra, ...kn, ...PLAN_TEXT.kn },
+  bn: { ...bn, ...EXTRA.bn, ...PLAN_TEXT.bn }, te: { ...te, ...EXTRA.te, ...PLAN_TEXT.te }, mr: { ...mr, ...EXTRA.mr, ...PLAN_TEXT.mr },
+  ta: { ...ta, ...EXTRA.ta, ...PLAN_TEXT.ta }, ur: { ...ur, ...EXTRA.ur, ...PLAN_TEXT.ur }, gu: { ...gu, ...EXTRA.gu, ...PLAN_TEXT.gu },
+  ml: { ...ml, ...EXTRA.ml, ...PLAN_TEXT.ml }, or: { ...or, ...EXTRA.or, ...PLAN_TEXT.or }, pa: { ...pa, ...EXTRA.pa, ...PLAN_TEXT.pa },
+  as: { ...as_, ...EXTRA.as, ...PLAN_TEXT.as },
 }
 
 export function translate(lang, key, vars) {
-  let s = (DICTS[lang] && DICTS[lang][key]) ?? en[key] ?? key
+  let s = (DICTS[lang] && DICTS[lang][key]) ?? DICTS.en[key] ?? key
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v))
   return s
 }

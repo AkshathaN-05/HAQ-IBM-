@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { api, openExport, openProtectedFile } from '../api'
 import { useI18n } from '../i18n'
-import { Confirm, ErrorNote, Money, StatusBadge, Timeline, formatDate } from '../components/ui'
+import { Confirm, ErrorNote, LetterView, Money, StatusBadge, Timeline, VoiceTextarea, formatDate } from '../components/ui'
+import { PlanCard } from '../components/ActionPlan'
 import { ChecksList } from './NewClaim'
 import { ProofList } from '../components/Proof'
 import Icon from '../components/Icon'
@@ -82,7 +83,7 @@ export default function ClaimDetail() {
           {claim.submitted_at && claim.employer_account && !claim.employer_account.registered && <p className="note">{t('employerNotOnHaq')}</p>}
         </div>
         <div className="claim-head-side">
-          <StatusBadge status={claim.status} />
+          <StatusBadge status={claim.status} issue={claim.issue_type} />
           {claim.amount_claimed && <p className="big-number"><Money value={claim.amount_claimed} /></p>}
           <div className="row gap-s end">
             <button type="button" className="btn btn-ghost btn-small" onClick={() => openExport(id).catch(setActionError)}><Icon name="print" size={18} /> {t('exportRecord')}</button>
@@ -105,7 +106,7 @@ export default function ClaimDetail() {
         <div className="detail-main stack">
           <section className="card">
             <h2>{t('s5Title')}</h2>
-            <pre className="letter-preview">{claim.complaint_text || '—'}</pre>
+            <LetterView text={claim.complaint_text} />
           </section>
           <section className="card">
             <h2>{t('evidence')}</h2>
@@ -116,6 +117,17 @@ export default function ClaimDetail() {
         </div>
 
         <aside className="detail-side stack">
+          {claim.action_plans?.length > 0 && (
+            <section className="card">
+              <h2>{t('planReceived')}</h2>
+              <ul className="offers">
+                {claim.action_plans.map((pl) => (
+                  <PlanCard key={pl.id} plan={pl} role="worker" busy={busy} onDecide={(pid, d) => act(`/action-plans/${pid}/${d}`)} />
+                ))}
+              </ul>
+            </section>
+          )}
+
           {claim.settlements.length > 0 && (
             <section className="card">
               <h2>{t('offers')}</h2>
@@ -173,7 +185,7 @@ export default function ClaimDetail() {
               {open && (
                 <form className="stack-s" onSubmit={async (e) => { e.preventDefault(); if (await act('/messages', { body: reply })) setReply('') }}>
                   <label htmlFor="reply" className="sr-only">{t('reply')}</label>
-                  <textarea id="reply" rows={3} maxLength={4000} placeholder={t('writeReply')} value={reply} onChange={(e) => setReply(e.target.value)} />
+                  <VoiceTextarea id="reply" rows={3} maxLength={4000} placeholder={t('writeReply')} value={reply} onChange={setReply} />
                   <div className="row end"><button className="btn btn-primary" disabled={busy || !reply.trim()}>{t('send')}</button></div>
                 </form>
               )}

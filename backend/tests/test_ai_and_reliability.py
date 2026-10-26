@@ -168,7 +168,7 @@ def test_invalid_ai_provider(settings):
 def test_migrations_are_idempotent(tmp_path):
     db = tmp_path / "m.sqlite3"
     first = run_migrations(db)
-    assert first == ["001_initial.sql", "002_issue_type.sql"]
+    assert first == ["001_initial.sql", "002_issue_type.sql", "003_action_plans.sql"]
     assert run_migrations(db) == []
     conn = sqlite3.connect(db)
     tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}

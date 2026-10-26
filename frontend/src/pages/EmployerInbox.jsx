@@ -63,7 +63,7 @@ export default function EmployerInbox() {
                 <li key={c.id}>
                   <Link to={`/employer/claims/${c.id}`} className="claim-row">
                     <div>
-                      <div className="row gap-s"><StatusBadge status={c.status} />{c.issue_type && c.issue_type !== 'wages' && <span className="tag">{t(`issue_${c.issue_type}`)}</span>}{c.unread > 0 && <span className="pill">{t('unreadUpdates', { n: c.unread })}</span>}</div>
+                      <div className="row gap-s"><StatusBadge status={c.status} issue={c.issue_type} />{c.issue_type && c.issue_type !== 'wages' && <span className="tag">{t(`issue_${c.issue_type}`)}</span>}{c.unread > 0 && <span className="pill">{t('unreadUpdates', { n: c.unread })}</span>}</div>
                       <strong>{t('fromWorker', { name: c.worker_name })}</strong>
                       <div className="muted small">{c.reference} · {formatDate(c.submitted_at)}</div>
                     </div>

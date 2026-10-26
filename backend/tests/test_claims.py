@@ -244,3 +244,40 @@ def test_other_problem_claim_has_no_amount_line(client, app, worker):
     assert "Amount requested" not in d["text"]
     listed = worker.get("/api/claims").json()["items"][0]
     assert listed["issue_type"] == "safety"
+
+
+def test_action_plan_flow_for_safety_problem(client, app, worker, employer):
+    c = worker.post("/api/claims", json={"language": "en", "issue_type": "safety",
+                                         "description": "No helmets or gloves are given at the site and a worker got hurt."}).json()
+    cid = c["id"]
+    worker.patch(f"/api/claims/{cid}", json={"employer_name": "Kumar Builders", "employer_email": employer.user["email"]})
+    d = worker.post(f"/api/claims/{cid}/draft").json()["draft"]
+    import uuid
+    r = worker.post(f"/api/claims/{cid}/submit", headers={"Idempotency-Key": str(uuid.uuid4())},
+                    json={"confirm": True, "complaint_text": d["text"], "shared_evidence_ids": []})
+    assert r.status_code == 200, r.text
+    # money offers are refused for a safety problem
+    r = employer.post(f"/api/employer/claims/{cid}/settlements", json={"amount": "500"})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "use_action_plan"
+    # unknown action keys are dropped; at least one action is needed
+    assert employer.post(f"/api/employer/claims/{cid}/action-plans", json={"actions": ["bogus"]}).status_code == 422
+    v = employer.post(f"/api/employer/claims/{cid}/action-plans", json={
+        "actions": ["ppe", "first_aid", "bogus"], "custom_action": "Daily safety check by the supervisor",
+        "contact_name": "Ravi (site supervisor)", "contact_phone": "9876500000", "note": "Equipment will arrive on Monday."}).json()
+    plan = v["action_plans"][-1]
+    assert plan["actions"] == ["ppe", "first_aid"] and plan["status"] == "proposed" and v["status"] == "settlement_offered"
+    # employer cannot mark done before the worker agrees
+    assert employer.post(f"/api/employer/claims/{cid}/action-plans/{plan['id']}/done", json={}).status_code == 409
+    v = worker.post(f"/api/claims/{cid}/action-plans/{plan['id']}/accept", json={}).json()
+    assert v["status"] == "settlement_accepted"
+    v = employer.post(f"/api/employer/claims/{cid}/action-plans/{plan['id']}/done", json={"note": "All 12 workers got helmets."}).json()
+    assert v["status"] == "payment_pending"  # waits for the worker
+    v = worker.post(f"/api/claims/{cid}/action-plans/{plan['id']}/confirm", json={}).json()
+    assert v["status"] == "resolved" and v["action_plans"][-1]["worker_confirmation"] == "confirmed"
+
+
+def test_wage_claims_cannot_get_action_plans(client, app, worker, employer):
+    cid = full_draft(worker, employer.user["email"])
+    assert submit(worker, cid).status_code == 200
+    r = employer.post(f"/api/employer/claims/{cid}/action-plans", json={"actions": ["meeting"]})
+    assert r.status_code == 422

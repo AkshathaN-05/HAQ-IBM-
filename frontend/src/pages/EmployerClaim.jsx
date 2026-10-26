@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api, newIdempotencyKey, uploadFile } from '../api'
 import { useI18n } from '../i18n'
-import { ErrorNote, Field, Money, StatusBadge, Timeline, formatDate } from '../components/ui'
+import { ErrorNote, Field, LetterView, Money, StatusBadge, Timeline, VoiceTextarea, formatDate } from '../components/ui'
+import { ActionPlanForm, PlanCard } from '../components/ActionPlan'
 import { Tabs, Thread } from './ClaimDetail'
 import { ProofList } from '../components/Proof'
 import Icon from '../components/Icon'
@@ -49,6 +50,9 @@ export default function EmployerClaim() {
   const canOffer = !closed && !['settlement_accepted', 'payment_pending', 'partially_resolved'].includes(claim.status)
   const accepted = claim.settlements.find((s) => s.status === 'accepted')
   const waiting = claim.settlements.some((s) => s.status === 'offered')
+  const isWages = (claim.issue_type || 'wages') === 'wages'
+  const planOpen = claim.action_plans.some((p) => ['proposed', 'accepted', 'done'].includes(p.status) && p.worker_confirmation !== 'confirmed')
+  const canPlan = !closed && !planOpen && !['settlement_accepted', 'payment_pending'].includes(claim.status)
 
   return (
     <div className="stack-l">
@@ -66,7 +70,7 @@ export default function EmployerClaim() {
           {claim.status === 'withdrawn' && <p className="note note-warn">{t('readOnlyWithdrawn')}</p>}
         </div>
         <div className="claim-head-side">
-          <StatusBadge status={claim.status} />
+          <StatusBadge status={claim.status} issue={claim.issue_type} />
           {claim.amount_claimed && <p className="big-number"><Money value={claim.amount_claimed} /></p>}
           {claim.status === 'submitted' && (
             <button type="button" className="btn btn-primary" disabled={busy} onClick={() => post('/acknowledge')}>{t('acknowledge')}</button>
@@ -86,7 +90,7 @@ export default function EmployerClaim() {
         <div className="detail-main stack">
           <section className="card">
             <h2>{t('complaint')}</h2>
-            <pre className="letter-preview">{claim.complaint_text}</pre>
+            <LetterView text={claim.complaint_text} />
             <h3>{t('sharedProof')}</h3>
             {claim.evidence.length === 0 ? <p className="muted">{t('noSharedProof')}</p> : (
               <ProofList evidence={claim.evidence} onError={setActionError} />
@@ -96,7 +100,23 @@ export default function EmployerClaim() {
         </div>
 
         <aside className="detail-side stack">
-          {claim.settlements.length > 0 && (
+          {!isWages && claim.action_plans.length > 0 && (
+            <section className="card">
+              <h2>{t('planTitle')}</h2>
+              <ul className="offers">
+                {claim.action_plans.map((pl) => (
+                  <PlanCard key={pl.id} plan={pl} role="employer" busy={busy}
+                    onDone={(pid, note) => post(`/action-plans/${pid}/done`, { note })} />
+                ))}
+              </ul>
+            </section>
+          )}
+          {!isWages && canPlan && (
+            <ActionPlanForm issue={claim.issue_type} busy={busy}
+              onSubmit={(body) => post('/action-plans', body, { 'Idempotency-Key': newIdempotencyKey() })} />
+          )}
+
+          {isWages && claim.settlements.length > 0 && (
             <section className="card">
               <h2>{t('offers')}</h2>
               <ul className="offers">
@@ -111,9 +131,9 @@ export default function EmployerClaim() {
             </section>
           )}
 
-          {waiting && !closed && <p className="note">{t('waitingOffer')}</p>}
+          {isWages && waiting && !closed && <p className="note">{t('waitingOffer')}</p>}
 
-          {canOffer && !waiting && (
+          {isWages && canOffer && !waiting && (
             <form className="card" onSubmit={async (e) => {
               e.preventDefault()
               if (await post('/settlements', { amount: offer.amount, explanation: offer.explanation, expires_on: offer.expires_on || null }, { 'Idempotency-Key': offerKey.current })) {
@@ -125,12 +145,12 @@ export default function EmployerClaim() {
                 <Field label={t('offerAmount')} id="oa"><input id="oa" inputMode="decimal" required value={offer.amount} onChange={(e) => setOffer((o) => ({ ...o, amount: e.target.value }))} /></Field>
                 <Field label={t('expiresOn')} id="oe"><input id="oe" type="date" min={today()} value={offer.expires_on} onChange={(e) => setOffer((o) => ({ ...o, expires_on: e.target.value }))} /></Field>
               </div>
-              <Field label={t('explanation')} id="ox"><textarea id="ox" rows={2} maxLength={2000} value={offer.explanation} onChange={(e) => setOffer((o) => ({ ...o, explanation: e.target.value }))} /></Field>
+              <VoiceTextarea id="ox" label={t('explanation')} rows={2} maxLength={2000} value={offer.explanation} onChange={(v) => setOffer((o) => ({ ...o, explanation: v }))} />
               <button className="btn btn-primary" disabled={busy}>{t('sendOffer')}</button>
             </form>
           )}
 
-          {claim.payments.length > 0 && (
+          {isWages && claim.payments.length > 0 && (
             <section className="card">
               <h2>{t('payments')}</h2>
               <ul className="offers">
@@ -144,7 +164,7 @@ export default function EmployerClaim() {
             </section>
           )}
 
-          {!closed && !waiting && (
+          {isWages && !closed && !waiting && (
             <form className="card" onSubmit={async (e) => {
               e.preventDefault()
               const body = { ...pay, receipt_evidence_id: pay.receipt_evidence_id || null, reference: pay.reference || null, settlement_id: accepted?.id || null }
@@ -181,7 +201,7 @@ export default function EmployerClaim() {
                       {['response', 'question', 'agree', 'dispute'].map((k) => <option key={k} value={k}>{t(`k_${k}`)}</option>)}
                     </select>
                   </Field>
-                  <textarea aria-label={t('writeReply')} rows={4} maxLength={4000} placeholder={t('writeReply')} value={msg.body} onChange={(e) => setMsg((m) => ({ ...m, body: e.target.value }))} />
+                  <VoiceTextarea id="reply" rows={4} maxLength={4000} placeholder={t('writeReply')} value={msg.body} onChange={(v) => setMsg((m) => ({ ...m, body: v }))} />
                   <div className="row end"><button className="btn btn-primary" disabled={busy || !msg.body.trim()}>{t('send')}</button></div>
                 </form>
                 <label className="dropzone small-drop">

@@ -15,6 +15,19 @@ from .evidence_files import ocr_available, stt_available
 
 router = APIRouter(prefix="/api", tags=["common"])
 
+# English wording for the printable record (the screens show these in the user's language).
+ACTION_LABELS = {
+    "ppe": "Give helmet, gloves and safety shoes to every worker", "first_aid": "Keep a first-aid kit and a trained person on site",
+    "fix_hazard": "Fix the unsafe place or machine before work continues", "training": "Explain safe working to all workers",
+    "injury_care": "Pay for treatment of anyone who was hurt", "inquiry": "Start an inquiry through the Internal Committee or Local Committee",
+    "separate": "Keep the people apart (different shift, team or site)", "warning": "Give a written warning to the person responsible",
+    "no_retaliation": "Promise in writing: no punishment for complaining", "safe_space": "Provide a safe place to work, toilets and transport",
+    "equal_pay": "Give the same pay and benefits as others doing the same work", "fair_shifts": "Share shifts and tasks fairly",
+    "review": "Review the decision together with the worker", "apology": "Give a written apology", "stop": "Tell the person, in writing, to stop the threats",
+    "protect": "Make sure the worker is safe at work and on the way home", "police": "Help report violence to the police (112)",
+    "meeting": "Hold a meeting with the people involved and a supervisor", "rules": "Remind everyone of the workplace rules", "fix": "Fix the problem the worker raised",
+}
+
 
 @router.get("/health")
 def health(ctx: AppContext = Depends(get_ctx)):
@@ -109,6 +122,15 @@ def export_claim(cid: str, user: dict = Depends(require_worker), ctx: AppContext
         rows.append("<h2>Settlement offers</h2><ul>")
         for s in v["settlements"]:
             rows.append(f"<li>₹{e(s['amount'])} — {e(s['status'])} ({e(s['created_at'])}) {e(s['explanation'] or '')}</li>")
+        rows.append("</ul>")
+    if v.get("action_plans"):
+        rows.append("<h2>Action plans</h2><ul>")
+        for ap in v["action_plans"]:
+            acts = [ACTION_LABELS.get(k, k) for k in ap["actions"]] + ([ap["custom_action"]] if ap["custom_action"] else [])
+            who = " ".join(x for x in (ap["contact_name"], ap["contact_phone"]) if x)
+            rows.append(f"<li>{e('; '.join(acts))} — {e(ap['status'])}"
+                        f"{(' — handled by ' + e(who)) if who else ''}{(' — by ' + e(ap['due_on'])) if ap['due_on'] else ''}"
+                        f" — worker: {e(ap['worker_confirmation'])} ({e(ap['created_at'])})</li>")
         rows.append("</ul>")
     if v["payments"]:
         rows.append("<h2>Payments recorded</h2><ul>")
