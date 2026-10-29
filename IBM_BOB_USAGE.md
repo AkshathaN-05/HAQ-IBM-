@@ -1,3 +1,4 @@
+
 # How we used IBM Bob in HAQ
 
 > **Before submitting:** do the four Bob tasks in `docs/BOB_GUIDE.md`, then replace every **[bracket]** below with what Bob actually did, and fill in the session log at the bottom. Delete this note when done.
